@@ -15,7 +15,14 @@ import {
   Image,
   Linking,
 } from 'react-native';
-
+import Animated, {
+  FadeIn,
+  FadeOut,
+  Layout,
+  RotateInDownLeft,
+  ZoomIn,
+  ZoomOut,
+} from 'react-native-reanimated';
 const MAX_WIDTH = Dimensions.get('window').width;
 const MAX_HEIGHT = Dimensions.get('window').height;
 
@@ -47,6 +54,7 @@ function App() {
   }
   function searchRepos() {
     setLoading(true);
+    setLoaded(false);
     axios({
       method: 'get',
       url: `https://api.github.com/users/${username}`,
@@ -64,7 +72,6 @@ function App() {
       method: 'get',
       url: `https://api.github.com/users/${username}/repos?per_page=100`,
     }).then((res) => {
-      setLoading(false);
       setRepos(res.data);
     });
     axios({
@@ -78,6 +85,8 @@ function App() {
       url: `https://api.github.com/users/${username}/repos?page=2&per_page=100`,
     }).then((res) => {
       setRepos(res.data);
+      setLoaded(true);
+      setLoading(false);
     });
   }
   function getDetails(repoName) {
@@ -98,7 +107,7 @@ function App() {
 
   function profile() {
     return (
-      <View
+      <Animated.View
         style={{
           width: MAX_WIDTH - 4,
           height: 220,
@@ -110,7 +119,9 @@ function App() {
           elevation: 20,
           shadowColor: 'black',
           flex: 1,
-        }}>
+        }}
+        entering={ZoomIn}
+        exiting={ZoomOut}>
         <Image
           source={{ uri: `${user.avatar_url}` }}
           style={{
@@ -180,23 +191,21 @@ function App() {
             Gists {user.public_gists}
           </Text>
         </View>
-              <Pressable
-                onPress={() => {
-                  Linking.openURL(
-                    `https://github.com/${username}/${details.name}`
-                  );
-                }}>
-                <Text
-                  style={{
-                    fontSize: 20,
+        <Pressable
+          onPress={() => {
+            Linking.openURL(`https://github.com/${username}`);
+          }}>
+          <Text
+            style={{
+              fontSize: 20,
 
-                    alignSelf: 'center',
-                    marginBottom: 2,
-                  }}>
-                  Open In Github!
-                </Text>
-              </Pressable>
-        </View>
+              alignSelf: 'center',
+              marginBottom: 2,
+            }}>
+            Open In Github!
+          </Text>
+        </Pressable>
+      </Animated.View>
     );
   }
 
@@ -206,7 +215,7 @@ function App() {
         onPress={() => {
           getDetails(repo.name);
         }}>
-        <View
+        <Animated.View
           style={{
             width: MAX_WIDTH - 4,
             height: 'auto',
@@ -221,7 +230,9 @@ function App() {
             flex: 1,
             alignContent: 'center',
           }}
-          key={repo.id}>
+          key={repo.id}
+          entering={ZoomIn}
+          exiting={ZoomOut}>
           <Text
             style={{
               padding: 8,
@@ -233,7 +244,7 @@ function App() {
             }}>
             {repo.name}
           </Text>
-        </View>
+        </Animated.View>
       </Pressable>
     );
   }
@@ -287,10 +298,65 @@ function App() {
       style={{
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
       }}>
+      <View style={{ flexDirection: 'row' }}>
+        <Pressable onPress={()=>{setLoaded(false); setLoading(false); setUsername("")}}>
+        <View
+          style={{
+            width: (MAX_WIDTH - 4) / 2,
+            height: 'auto',
+            backgroundColor: 'white',
+            borderRadius: 13,
+            justifyContent: 'center',
+            marginLeft: 2,
+            marginTop: 8,
+            borderWidth: 1,
+            elevation: 20,
+            shadowColor: 'black',
+            alignContent: 'center',
+          }}>
+          <Text
+            style={{
+              alignSelf: 'center',
+              borderRadius: 13,
+              fontSize: 20,
+              marginTop: 3,
+            }}>
+            Back
+          </Text>
+        </View>
+        </Pressable>
+        <Pressable>
+        <View
+          style={{
+            width: (MAX_WIDTH - 4) / 2,
+            height: 'auto',
+            backgroundColor: 'white',
+            borderRadius: 13,
+            justifyContent: 'center',
+            marginLeft: 2,
+            marginTop: 8,
+            borderWidth: 1,
+            elevation: 20,
+            shadowColor: 'black',
+            alignContent: 'center',
+          }}>
+          <Text
+            style={{
+              alignSelf: 'center',
+              borderRadius: 13,
+              fontSize: 20,
+              marginTop: 3,
+            }}>
+            Profile
+          </Text>
+        </View>
+      </Pressable>
+      </View>
       <View
         style={{
           width: MAX_WIDTH - 4,
           height: 50,
+          marginTop: 5,
           backgroundColor: 'white',
           borderRadius: 13,
           justifyContent: 'center',
@@ -298,9 +364,8 @@ function App() {
           borderWidth: 1,
           flexDirection: 'row',
           elevation: 20,
-          shadowColor: '#52006A',
+          shadowColor: 'black',
         }}>
-        <Image source={'./icons8-clear-symbol-24.png'}/>
         <Modal visible={repomodal}>
           <View
             style={{
@@ -396,7 +461,6 @@ function App() {
                 <Text
                   style={{
                     fontSize: 20,
-
                     alignSelf: 'center',
                     marginBottom: 2,
                   }}>
@@ -476,9 +540,27 @@ function App() {
           textAlign={'center'}></TextInput>
       </View>
 
-      <ScrollView Vertical>
+      <ScrollView Vertical style={{endFillColor:'black'}}>
         <View>{loaded ? profile() : () => {}}</View>
-        <View>{loaded ? repos.map(renderRepo) : () => {}}</View>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          {loaded ? repos.map(renderRepo) : () => {}}
+        </View>
+        <View>
+          {loading ? (
+            <Image
+              style={{
+                marginTop: 50,
+                alignSelf: 'center',
+                justifySelf: 'center',
+                width:50,
+                height:50,
+              }}
+              source={require('./loading.gif')}
+            />
+          ) : (
+            () => {}
+          )}
+        </View>
       </ScrollView>
     </View>
   );
