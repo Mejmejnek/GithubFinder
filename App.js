@@ -13,6 +13,7 @@ import {
   Modal,
   Pressable,
   Image,
+  Linking,
 } from 'react-native';
 
 const MAX_WIDTH = Dimensions.get('window').width;
@@ -25,7 +26,21 @@ function App() {
   const [repos, setRepos] = useState([]);
   const [user, setUser] = useState([]);
   const [details, setDetails] = useState({});
+  const [issues, setIssues] = useState([]);
+  const [repomodal, setRepoModal] = useState(false);
+  const [page, setPage] = useState(0);
 
+  const isCloseToBottom = ({
+    layoutMeasurement,
+    contentOffset,
+    contentSize,
+  }) => {
+    const paddingToBottom = 20;
+    return (
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom
+    );
+  };
   function handleSubmit(e) {
     e.preventDefault();
     searchRepos();
@@ -37,26 +52,34 @@ function App() {
       url: `https://api.github.com/users/${username}`,
     })
       .then((res) => {
-        setLoaded(true)
+        setLoaded(true);
         setUser(res.data);
       })
       .catch((e) => {
         alert('Couldnt find anything');
         setLoading(false);
-        setLoaded(false)
+        setLoaded(false);
       });
-      axios({
+    axios({
       method: 'get',
-      url: `https://api.github.com/users/${username}/repos`,
-    })
-      .then((res) => {
-        setLoading(false);
-        setRepos(res.data);
-      });
-      
+      url: `https://api.github.com/users/${username}/repos?per_page=100`,
+    }).then((res) => {
+      setLoading(false);
+      setRepos(res.data);
+    });
+    axios({
+      method: 'get',
+      url: `https://api.github.com/users/${username}/repos?page=1&per_page=100`,
+    }).then((res) => {
+      setRepos(res.data);
+    });
+    axios({
+      method: 'get',
+      url: `https://api.github.com/users/${username}/repos?page=2&per_page=100`,
+    }).then((res) => {
+      setRepos(res.data);
+    });
   }
-
-
   function getDetails(repoName) {
     axios({
       method: 'get',
@@ -64,76 +87,119 @@ function App() {
     }).then((res) => {
       setDetails(res.data);
     });
-  }
-  function searchico() {
-    return (
-      <Image
-        source={require('./icons8-search.gif')}
-        style={{ width: 35, height: 35, marginTop: 7 }}
-      />
-    );
-  }
-  function searchinggif() {
-    return (
-      <Image
-        source={require('./icons8-search-120.png')}
-        style={{ width: 35, height: 35, marginTop: 7 }}
-      />
-    );
+    axios({
+      method: 'get',
+      url: `https://api.github.com/repos/${username}/${repoName}/issues`,
+    }).then((res) => {
+      setIssues(res.data);
+    });
+    setRepoModal(true);
   }
 
-  
-  function profile(){
+  function profile() {
     return (
-          <View
+      <View
+        style={{
+          width: MAX_WIDTH - 4,
+          height: 220,
+          backgroundColor: 'white',
+          borderRadius: 13,
+          marginLeft: 2,
+          marginTop: 8,
+          borderWidth: 1,
+          elevation: 20,
+          shadowColor: 'black',
+          flex: 1,
+        }}>
+        <Image
+          source={{ uri: `${user.avatar_url}` }}
           style={{
-            width: MAX_WIDTH - 4,
-            height: 50,
-            backgroundColor: 'white',
+            height: 85,
+            width: 85,
+            alignSelf: 'center',
             borderRadius: 13,
-            justifyContent: 'center',
-            marginLeft: 2,
-            marginTop: 8,
-            borderWidth: 1,
-            elevation: 20,
-            shadowColor: 'black',
-            flex: 1,
-            alignContent:'center'
-          }}/>
-
-    );
-  }
-   function notExist() {
-    return (
+            marginTop: 10,
+          }}
+        />
+        <Text
+          style={{
+            alignSelf: 'center',
+            borderRadius: 13,
+            fontWeight: 'bold',
+            fontSize: 25,
+          }}>
+          {user.login}
+        </Text>
         <View
           style={{
-            width: MAX_WIDTH - 4,
-            height: 50,
-            backgroundColor: 'white',
-            borderRadius: 13,
-            justifyContent: 'center',
-            marginLeft: 2,
-            marginTop: 8,
-            borderWidth: 1,
-            elevation: 20,
-            shadowColor: 'red',
             flex: 1,
-            alignContent:'center',
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
+            flexWrap: 'wrap',
           }}>
           <Text
             style={{
-              padding: 8,
-              fontSize: 18,
-              color: 'black',
-              width: 340,
-              textAlign: 'center',
-              marginLeft:15
+              marginLeft: 10,
+              justifyText: 'flex-start',
+              marginBottom: 20,
+              fontSize: 20,
+              width: 220,
             }}>
-          This user does not exist!
+            Followers {user.followers}
           </Text>
+          <Text
+            style={{
+              marginBottom: 20,
+              justifyText: 'flex-end',
+              fontSize: 20,
+            }}>
+            Following {user.following}
+          </Text>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
+          }}>
+          <Text
+            style={{
+              marginLeft: 10,
+              justifyText: 'center',
+              width: 220,
+              fontSize: 20,
+            }}>
+            Repos {user.public_repos}
+          </Text>
+          <Text
+            style={{
+              justifyText: 'center',
+              justifyContent: 'flex-end',
+              fontSize: 20,
+            }}>
+            Gists {user.public_gists}
+          </Text>
+        </View>
+              <Pressable
+                onPress={() => {
+                  Linking.openURL(
+                    `https://github.com/${username}/${details.name}`
+                  );
+                }}>
+                <Text
+                  style={{
+                    fontSize: 20,
+
+                    alignSelf: 'center',
+                    marginBottom: 2,
+                  }}>
+                  Open In Github!
+                </Text>
+              </Pressable>
         </View>
     );
   }
+
   function renderRepo(repo) {
     return (
       <Pressable
@@ -143,7 +209,7 @@ function App() {
         <View
           style={{
             width: MAX_WIDTH - 4,
-            height: 50,
+            height: 'auto',
             backgroundColor: 'white',
             borderRadius: 13,
             justifyContent: 'center',
@@ -153,7 +219,7 @@ function App() {
             elevation: 20,
             shadowColor: 'black',
             flex: 1,
-            alignContent:'center'
+            alignContent: 'center',
           }}
           key={repo.id}>
           <Text
@@ -163,7 +229,7 @@ function App() {
               color: 'black',
               width: 340,
               textAlign: 'center',
-              marginLeft:15
+              marginLeft: 15,
             }}>
             {repo.name}
           </Text>
@@ -171,12 +237,56 @@ function App() {
       </Pressable>
     );
   }
+  function renderIssues(title) {
+    return (
+      <View
+        style={{
+          width: MAX_WIDTH - 4,
+          height: 'auto',
+          backgroundColor: 'white',
+          borderRadius: 13,
+          justifyContent: 'center',
+          marginLeft: 2,
+          marginTop: 8,
+          borderWidth: 1,
+          elevation: 20,
+          shadowColor: 'black',
+          flex: 1,
+          alignContent: 'center',
+        }}
+        key={title.id}>
+        <Text
+          style={{
+            padding: 8,
+            fontSize: 18,
+            color: 'black',
+            width: 340,
+            textAlign: 'center',
+            marginLeft: 15,
+            fontWeight: 'bold',
+          }}>
+          {title.title}
+        </Text>
+        <Text
+          style={{
+            marginBottom: 7,
+            color: 'grey',
+            fontSize: 12,
+            marginTop: 1,
+            marginLeft: 2,
+            marginRight: 2,
+            textAlign: 'left',
+          }}>
+          {title.body}
+        </Text>
+      </View>
+    );
+  }
   return (
     <View
       style={{
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
       }}>
-      <Text style={{ color: 'black' }}>{details.name}</Text>
       <View
         style={{
           width: MAX_WIDTH - 4,
@@ -190,6 +300,168 @@ function App() {
           elevation: 20,
           shadowColor: '#52006A',
         }}>
+        <Image source={'./icons8-clear-symbol-24.png'}/>
+        <Modal visible={repomodal}>
+          <View
+            style={{
+              height: MAX_HEIGHT,
+            }}>
+            <View
+              style={{
+                width: MAX_WIDTH - 4,
+                height: 'auto',
+                backgroundColor: 'white',
+                borderRadius: 13,
+                marginLeft: 2,
+                marginTop: 8,
+                borderWidth: 1,
+                elevation: 20,
+                shadowColor: 'black',
+              }}>
+              <Text
+                style={{
+                  alignSelf: 'center',
+                  borderRadius: 13,
+                  fontWeight: 'bold',
+                  fontSize: 25,
+                  marginTop: 5,
+                }}>
+                {details.name}
+              </Text>
+            </View>
+            <View
+              style={{
+                width: MAX_WIDTH - 4,
+                height: 130,
+                backgroundColor: 'white',
+                borderRadius: 13,
+                marginLeft: 2,
+                marginTop: 8,
+                borderWidth: 1,
+                elevation: 20,
+                shadowColor: 'black',
+              }}>
+              <View
+                style={{
+                  marginTop: 10,
+                  flex: 1,
+                  flexDirection: 'row',
+                }}>
+                <Text
+                  style={{
+                    marginLeft: 10,
+                    justifyText: 'flex-start',
+                    marginBottom: 20,
+                    fontSize: 20,
+                    width: 220,
+                  }}>
+                  Lang: {details.language}
+                </Text>
+                <Text
+                  style={{
+                    justifyText: 'flex-end',
+                    fontSize: 20,
+                  }}>
+                  Watching: {details.watchers_count}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                }}>
+                <Text
+                  style={{
+                    marginLeft: 10,
+                    justifyText: 'center',
+                    width: 220,
+                    fontSize: 20,
+                  }}>
+                  Stars: {details.stargazers_count}
+                </Text>
+                <Text
+                  style={{
+                    justifyText: 'center',
+                    fontSize: 20,
+                  }}>
+                  Forks: {details.forks}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  Linking.openURL(
+                    `https://github.com/${username}/${details.name}`
+                  );
+                }}>
+                <Text
+                  style={{
+                    fontSize: 20,
+
+                    alignSelf: 'center',
+                    marginBottom: 2,
+                  }}>
+                  Open In Github!
+                </Text>
+              </Pressable>
+            </View>
+            <View
+              style={{
+                width: MAX_WIDTH - 4,
+                height: 50,
+                backgroundColor: 'white',
+                borderRadius: 13,
+                marginLeft: 2,
+                marginTop: 8,
+                borderWidth: 1,
+                elevation: 20,
+                shadowColor: 'black',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  alignSelf: 'center',
+                  marginBottom: 2,
+                }}>
+                Issues:
+              </Text>
+            </View>
+            <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+              <ScrollView>{issues.map(renderIssues)}</ScrollView>
+            </View>
+            <Pressable
+              onPress={() => {
+                setRepoModal(false);
+              }}>
+              <View
+                style={{
+                  width: MAX_WIDTH - 4,
+                  height: 50,
+                  backgroundColor: 'white',
+                  borderRadius: 13,
+                  marginLeft: 2,
+                  marginTop: 8,
+                  borderWidth: 1,
+                  elevation: 20,
+                  shadowColor: 'black',
+                  marginBottom: 2,
+                }}>
+                <Text
+                  style={{
+                    alignSelf: 'center',
+                    borderRadius: 13,
+                    fontWeight: 'bold',
+                    fontSize: 20,
+                    marginTop: 5,
+                  }}>
+                  Close
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </Modal>
         <TextInput
           placeholder="Search A Github Username"
           value={username}
@@ -200,16 +472,13 @@ function App() {
             fontSize: 18,
             color: 'black',
             width: 340,
-            marginLeft: -15,
-          }}></TextInput>
-        <Pressable onPress={handleSubmit}>
-          {loading ? searchico() : searchinggif()}
-        </Pressable>
+          }}
+          textAlign={'center'}></TextInput>
       </View>
-  
+
       <ScrollView Vertical>
-        <View>{loaded ?profile():()=>{}}</View>
-        <View>{loaded?repos.map(renderRepo):()=>{}}</View>
+        <View>{loaded ? profile() : () => {}}</View>
+        <View>{loaded ? repos.map(renderRepo) : () => {}}</View>
       </ScrollView>
     </View>
   );
